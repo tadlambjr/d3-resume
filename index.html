@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D3 Example</title>
+    <style>
+        .node {
+            stroke: #fff;
+            stroke-width: 1.5px;
+        }
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+            stroke-width: 3px; /* 3 times wider */
+        }
+        .label {
+            font-size: 12px;
+            text-anchor: middle;
+            fill: white; /* White text */
+        }
+        .bubble {
+            fill: #ccc;
+            stroke: #999;
+            stroke-width: 1px;
+        }
+        .bubble-label {
+            font-size: 10px;
+            text-anchor: middle;
+            fill: black;
+        }
+    </style>
+</head>
+<body>
+    <h1>Network diagram with bubbles</h1>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        const data = ["A", "B", "C", "D", "E"];
+
+        const nodes = [
+            { id: "A", group: 0, bubbles: ["A1", "A2", "A3"], width: 120, height: 60, fx: 60, fy: 60 },
+            { id: "B", group: 1, bubbles: ["B1", "B2"], width: 180, height: 90, fx: 840, fy: 60 },
+            { id: "C", group: 2, bubbles: ["C1", "C2", "C3", "C4"], width: 200, height: 100 },
+            { id: "D", group: 3, bubbles: ["D1", "D2", "D3"], width: 150, height: 75 },
+            { id: "E", group: 4, bubbles: ["E1", "E2", "E3", "E4", "E5"], width: 180, height: 85 }
+        ];
+
+        const links = [
+            { source: "A", target: "B" },
+            { source: "A", target: "C" },
+            { source: "B", target: "D" },
+            { source: "C", target: "E" },
+            { source: "B", target: "E" } // Connect B and E
+        ];
+
+        const width = 900;
+        const height = 600;
+
+        const svg = d3.select("body").append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        const simulation = d3.forceSimulation(nodes)
+            .force("link", d3.forceLink(links).id(d => d.id).distance(100))
+            .force("charge", d3.forceManyBody().strength(-300))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("x", d3.forceX().strength(0.1))
+            .force("y", d3.forceY().strength(0.1));
+
+        const link = svg.append("g")
+            .attr("class", "links")
+            .selectAll("line")
+            .data(links)
+            .enter().append("line")
+            .attr("class", "link");
+
+        const node = svg.append("g")
+            .attr("class", "nodes")
+            .selectAll("g")
+            .data(nodes)
+            .enter().append("g");
+
+        node.append("rect")
+            .attr("class", "node")
+            .attr("width", d => d.width) // Use the width attribute
+            .attr("height", d => d.height) // Use the height attribute
+            .attr("rx", 5) // Rounded corners
+            .attr("ry", 5) // Rounded corners
+            .attr("fill", d => d3.schemeCategory10[d.group]);
+
+        node.append("text")
+            .attr("class", "label")
+            .attr("x", d => d.width / 2) // Center the text horizontally
+            .attr("y", 15) // Position the text at the top of the rectangle
+            .attr("dy", "0.35em") // Adjust vertical alignment
+            .text(d => d.id);
+
+        node.each(function(d) {
+            const g = d3.select(this);
+            const bubbleData = d.bubbles.map((bubble, i) => ({ id: bubble, group: d.group }));
+
+            const bubbleSimulation = d3.forceSimulation(bubbleData)
+                .force("charge", d3.forceManyBody().strength(5))
+                .force("center", d3.forceCenter(d.width / 2, d.height / 2 + 10)) // Adjust center to leave margin
+                .force("collision", d3.forceCollide().radius(12));
+
+            const bubbles = g.selectAll(".bubble")
+                .data(bubbleData)
+                .enter().append("g");
+
+            bubbles.append("rect")
+                .attr("class", "bubble")
+                .attr("width", 20)
+                .attr("height", 10)
+                .attr("rx", 3)
+                .attr("ry", 3);
+
+            bubbles.append("text")
+                .attr("class", "bubble-label")
+                .attr("x", 10)
+                .attr("y", 5)
+                .attr("dy", "0.35em")
+                .text(b => b.id);
+
+            bubbleSimulation.on("tick", () => {
+                bubbles.attr("transform", b => `translate(${b.x - 10}, ${b.y - 5})`);
+           });
+        });
+
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            node
+                .attr("transform", d => `translate(${d.x - d.width / 2}, ${d.y - d.height / 2})`); // Center the rectangle
+        });
+    </script>
+</body>
+</html>
